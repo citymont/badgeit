@@ -4,7 +4,9 @@ Badge It!
 Transform users interactions into game !
 
 ```
-$badge = new Badges();
+$badge = new Badgeit();
+$badge->prfxr = "fanbase_"; mysql table prefix
+$badge->tbl_fan = "fan"; mysql user table
 ```
 
 Create an exploit
