@@ -363,40 +363,75 @@ Class Badgeit {
 		while($row = mysql_fetch_array($Badges)){
 
 			// Minimum de point requis
-			if($user['total_point']>$row['min_points']) { $pass = true; }
+			if($user['total_point']>=$row['min_points']) { $pass = true; }
 
-			if($pass === true) {
+			if($pass === true and !empty($row['rules'])) {
 
 				$pass = false; 
 				// rules requises
-				$rules = explode(';', $row['rules']);
+				if (strpos($row['rules'],'||') !== true) {
+				
+					$rules = explode(';', $row['rules']);
 
-				foreach ($rules as $key => $rule) { //only count id_exploits ( cumulatif )
+					foreach ($rules as $key => $rule) { // AND
+					
+						$a = explode(':', $rule); 
+						$b = preg_split('(-|\+|\*|\/|>|<)',$a[1]); 
+						$c = preg_match('/(-|\+|\*|\/|>|<)/',$a[1],$matches);
+						$id = $b[0];
+						$count = $b[1];
+						$operateur = $matches[0];
 
-					$a = explode(':', $rule);
-					$b = preg_split('(-|\+|\*|\/|>|<)',$a[1]);
-					$c = preg_match('/(-|\+|\*|\/|>|<)/',$a[1],$matches);
+						$test = $this->db->see("SELECT count(id) as nb FROM ".$this->prfxr."exploits WHERE exploit_id='$id' AND user_id='$user_id'");
+						if( $test == true ) {
+							switch ($operateur) {
+								case '<':
+									if($test['nb']<$count) { $pass = true; } else { break; }
+									break;
 
-					$id = $b[0];
-					$count = $b[1];
-					$operateur = $matches[0];
+								case '>':
+									if($test['nb']>$count) { $pass = true; } else { break; }
+									break;
 
-					$test = $this->db->see("SELECT count(id) as nb FROM ".$this->prfxr."exploits WHERE exploit_id='$id' AND user_id='$user_id'");
-					if( $test == true ) {
-						switch ($operateur) {
-							case '<':
-								if($test['nb']<$count) { $pass = true; } else { break; }
-								break;
-
-							case '>':
-								if($test['nb']>$count) { $pass = true; } else { break; }
-								break;
-
+							}
+							
 						}
-						
-					}
 
+					}
 				}
+				// OR 
+				if (strpos($row['rules'],'||') !== false) {
+
+					$rules = explode('||', $row['rules']);
+
+					foreach ($rules as $key => $rule) { // OR
+
+						$a = explode(':', $rule); 
+						$b = preg_split('(-|\+|\*|\/|>|<)',$a[1]);
+						$c = preg_match('/(-|\+|\*|\/|>|<)/',$a[1],$matches);
+
+						$id = $b[0];
+						$count = $b[1];
+						$operateur = $matches[0];
+
+						$test = $this->db->see("SELECT count(id) as nb FROM ".$this->prfxr."exploits WHERE exploit_id='$id' AND user_id='$user_id'");
+						if( $test == true ) {
+							switch ($operateur) {
+								case '<':
+									if($test['nb']<$count) { $pass = true; break 2; } else { break; }
+									break;
+
+								case '>':
+									if($test['nb']>$count) { $pass = true; break 2; } else { break; }
+									break;
+
+							}
+							
+						}
+
+					}
+				}
+
 			}
 			if($pass === true) {
 
